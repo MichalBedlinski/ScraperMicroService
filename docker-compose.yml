@@ -1,0 +1,55 @@
+version: "3.5"
+
+services:
+  web:
+    build: 
+     context: '.'
+    depends_on:
+      - redis
+      - mysql
+    environment:
+      APP_NAME: "Scraper Micro Service Flask"
+      SQLALCHEMY_TRACK_MODIFICATIONS: 'false'
+      SQLALCHEMY_DATABASE_URI: 'mysql+pymysql://root:@mysql/db'
+      CELERY_BROKER_URL: 'redis://redis:6379/0'
+      CELERY_RESULT_BACKEND: 'db+mysql+pymysql://root:@mysql/db'
+    ports:
+      - "5000:5000"
+    entrypoint: /app/Docker_entrypoint.sh
+    volumes:
+      - 'images-volume:/app/images'
+      - 'texts-volume:/app/texts'
+
+  worker:
+    build:
+      context: '.'
+    depends_on:
+      - redis
+      - mysql
+    environment:
+      APP_NAME: "Scraper Micro Service Celery"
+      SQLALCHEMY_TRACK_MODIFICATIONS: 'false'
+      SQLALCHEMY_DATABASE_URI: 'mysql+pymysql://root:@mysql/db'
+      CELERY_BROKER_URL: 'redis://redis:6379/0'
+      CELERY_RESULT_BACKEND: 'db+mysql+pymysql://root:@mysql/db'
+    command: celery worker -l info -A app.celeryapp.celery_worker.celery
+    volumes:
+      - 'images-volume:/app/images'
+      - 'texts-volume:/app/texts'
+
+  mysql:
+    image: mysql:5.7
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'true'
+      MYSQL_DATABASE: 'db'
+      MYSQL_USER: 'root'
+      MYSQL_PASSWORD: ''
+      expose: '3306'
+
+  redis:
+    image: "redis:5.0.4-stretch"
+
+
+volumes:
+  images-volume:
+  texts-volume:
